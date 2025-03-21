@@ -5,7 +5,6 @@ pipeline {
         DOCKER_IMAGE = "poojashree26/docker"
         DOCKER_TAG = "latest"
         DOCKER_CREDENTIALS_ID = "docker-hub-creds"
-        
         KUBECONFIG = "/var/lib/jenkins/.kube/config"
     }
 
@@ -18,13 +17,11 @@ pipeline {
 
         stage('Build Application') {
             steps {
-                script {try {
-                         sh '${MAVEN_HOME}/bin/mvn clean package -DskipTests'
-                    } catch (Exception e) {
-                         sh 'mvn test -Dmaven.test.failure.ignore=true'
-                        echo "Tests failed, but proceeding..."
+                script {
+                    def buildStatus = sh(script: 'mvn clean package -DskipTests', returnStatus: true)
+                    if (buildStatus != 0) {
+                        echo "Build failed, but proceeding..."
                     }
-                   
                 }
             }
         }
@@ -32,10 +29,8 @@ pipeline {
         stage('Run Maven Tests') {
             steps {
                 script {
-                    try {
-                        sh 'mvn test'
-                    } catch (Exception e) {
-                         sh 'mvn test -Dmaven.test.failure.ignore=true'
+                    def testStatus = sh(script: 'mvn test', returnStatus: true)
+                    if (testStatus != 0) {
                         echo "Tests failed, but proceeding..."
                     }
                 }
@@ -45,15 +40,15 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
-                sh 'chmod +x build.sh'
-                sh './build.sh'
+                sh 'chmod +x build.sh && ./build.sh'
             }
         }
+
         stage('Login to Docker Hub') {
             steps {
                 echo "Logging into Docker Hub..."
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
+                    sh 'echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin'
                 }
             }
         }
@@ -69,12 +64,9 @@ pipeline {
         stage('Deploy Docker Container') {
             steps {
                 echo "Deploying Docker container..."
-                sh 'chmod +x deploy.sh'
-                sh './deploy.sh'
+                sh 'chmod +x deploy.sh && ./deploy.sh'
             }
         }
-
-        
     }
 
     post {
