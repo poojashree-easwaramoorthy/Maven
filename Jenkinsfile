@@ -12,7 +12,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git url: 'https://github.com/poojashree-easwaramoorthy/Maven.git', branch: 'master'
+                git url: 'https://github.com/poojashree-easwaramoorthy/Maven', branch: 'master'
             }
         }
 
